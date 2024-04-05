@@ -1,6 +1,5 @@
-# ZFS
-1. Определение алгоритма с наилучшим сжатием
-'''
+1.Определение алгоритма с наилучшим сжатием
+```
 [root@zfs vagrant]# lsblk
 NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
 sda      8:0    0   40G  0 disk
@@ -13,44 +12,44 @@ sdf      8:80   0  512M  0 disk
 sdg      8:96   0  512M  0 disk
 sdh      8:112  0  512M  0 disk
 sdi      8:128  0  512M  0 disk
-'''
+```
 Создаём пулы из дисков в режиме RAID 1:
-'''
+```
 [root@zfs vagrant]# zpool create otus1 mirror /dev/sdb /dev/sdc
 [root@zfs vagrant]# zpool create otus2 mirror /dev/sdd /dev/sde
 [root@zfs vagrant]# zpool create otus3 mirror /dev/sdf /dev/sdg
 [root@zfs vagrant]# zpool create otus4 mirror /dev/sdh /dev/sdi
-'''
+```
 Смотрим информацию о пулах:
-'''
+```
 [root@zfs vagrant]# zpool list
 NAME    SIZE  ALLOC   FREE  CKPOINT  EXPANDSZ   FRAG    CAP  DEDUP    HEALTH  ALTROOT
 otus1   480M  91.5K   480M        -         -     0%     0%  1.00x    ONLINE  -
 otus2   480M  91.5K   480M        -         -     0%     0%  1.00x    ONLINE  -
 otus3   480M   100K   480M        -         -     0%     0%  1.00x    ONLINE  -
 otus4   480M  91.5K   480M        -         -     0%     0%  1.00x    ONLINE  -
-'''
+```
 
 Добавим разные алгоритмы сжатия в каждую файловую систему:
-'''
+```
 [root@zfs vagrant]# Добавим разные алгоритмы сжатия в каждую файловую систему:^C
 [root@zfs vagrant]# zfs set compression=lzjb otus1
 [root@zfs vagrant]# zfs set compression=lz4 otus2
 [root@zfs vagrant]# zfs set compression=gzip-9 otus3
 [root@zfs vagrant]# zfs set compression=zle otus4
-'''
+```
 
 Проверим, что все файловые системы имеют разные методы сжатия:
-'''
+```
 [root@zfs vagrant]# zfs get all | grep compression
 otus1  compression           lzjb                   local
 otus2  compression           lz4                    local
 otus3  compression           gzip-9                 local
 otus4  compression           zle                    local
-'''
+```
 
 Скачаем один и тот же текстовый файл во все пулы:
-'''
+```
 [root@zfs vagrant]# for i in {1..4}; do wget -P /otus$i https://gutenberg.org/cache/epub/2600/pg2600.converter.log; done
 --2024-04-05 21:26:57--  https://gutenberg.org/cache/epub/2600/pg2600.converter.log
 Resolving gutenberg.org (gutenberg.org)... 152.19.134.47, 2610:28:3090:3000:0:bad:cafe:47
@@ -79,10 +78,10 @@ Connecting to gutenberg.org (gutenberg.org)|152.19.134.47|:443... connected.
 HTTP request sent, awaiting response... 200 OK
 Length: 41034307 (39M) [text/plain]
 Saving to: '/otus2/pg2600.converter.log'
-'''
+```
 Проверим, что файл был скачан во все пулы:
 
-'''
+```
 [root@zfs vagrant]# ls -l /otus*
 /otus1:
 total 22076
@@ -99,23 +98,23 @@ total 10961
 /otus4:
 total 40101
 -rw-r--r--. 1 root root 41034307 Apr  2 07:54 pg2600.converter.log
-'''
+```
 Проверим сжатие
 
-'''
+```
 [root@zfs vagrant]# zfs list
 NAME    USED  AVAIL     REFER  MOUNTPOINT
 otus1  21.7M   330M     21.6M  /otus1
 otus2  17.7M   334M     17.6M  /otus2
 otus3  10.8M   341M     10.7M  /otus3
 otus4  39.3M   313M     39.2M  /otus4
-'''
+```
 т.е. самое лучшее сжатие otus3 - gzip-9
 
 2. Определение настроек пула
 
 Скачиваем архив в домашний каталог:
-'''
+```
 [root@zfs vagrant]# wget -O archive.tar.gz --no-check-certificate 'https://drive.usercontent.google.com/download?id=1MvrcEp-WgAQe57aDEzxSRalPAwbNN1Bb&export=download'
 --2024-04-05 21:43:16--  https://drive.usercontent.google.com/download?id=1MvrcEp-WgAQe57aDEzxSRalPAwbNN1Bb&export=download
 Resolving drive.usercontent.google.com (drive.usercontent.google.com)... 64.233.162.132, 2a00:1450:4010:c05::84
@@ -127,20 +126,20 @@ Saving to: 'archive.tar.gz'
 100%[===================================================================================================================================================================================================>] 7,275,140   8.50MB/s   in 0.8s
 
 2024-04-05 21:43:24 (8.50 MB/s) - 'archive.tar.gz' saved [7275140/7275140]
-'''
+```
 
 Разорхивируем
 
-'''
+```
 [root@zfs vagrant]# tar -xzvf archive.tar.gz
 zpoolexport/
 zpoolexport/filea
 zpoolexport/fileb
-'''
+```
 
 Проверим, возможно ли импортировать данный каталог в пул:
 
-'''
+```
 [root@zfs vagrant]# zpool import -d zpoolexport/
    pool: otus
      id: 6554193320433390805
@@ -152,16 +151,16 @@ zpoolexport/fileb
           mirror-0                           ONLINE
             /home/vagrant/zpoolexport/filea  ONLINE
             /home/vagrant/zpoolexport/fileb  ONLINE
-'''
+```
 
 Сделаем импорт данного пула к нам в ОС:
 
-'''
+```
 [root@zfs vagrant]# zpool import -d zpoolexport/ otus
-'''
+```
 
 Смотрим pool
-'''
+```
 [root@zfs vagrant]# zpool status
   pool: otus
  state: ONLINE
@@ -227,11 +226,11 @@ config:
             sdi     ONLINE       0     0     0
 
 errors: No known data errors
-'''
+```
 
 Далее нам нужно определить настройки:
 
-'''
+```
 [root@zfs vagrant]# zpool get all otus
 NAME  PROPERTY                       VALUE                          SOURCE
 otus  size                           480M                           -
@@ -288,10 +287,10 @@ otus  feature@spacemap_v2            active                         local
 otus  feature@allocation_classes     enabled                        local
 otus  feature@resilver_defer         enabled                        local
 otus  feature@bookmark_v2            enabled                        local
-'''
+```
 Все настройки
 
-'''
+```
 [root@zfs vagrant]# zfs get all otus
 NAME  PROPERTY              VALUE                  SOURCE
 otus  type                  filesystem             -
@@ -365,19 +364,19 @@ otus  keylocation           none                   default
 otus  keyformat             none                   default
 otus  pbkdf2iters           0                      default
 otus  special_small_blocks  0                      default
-'''
+```
 
 Можем уточнить любой параметр из настроек:
-'''
+```
 [root@zfs vagrant]# zfs get referenced otus
 NAME  PROPERTY    VALUE     SOURCE
 otus  referenced  24K       -
-'''
+```
 
 3. Работа со снапшотом, поиск сообщения от преподавателя
 
 Скачаем файл, указанный в задании:
-'''
+```
 
 [root@zfs vagrant]# --2024-04-05 21:58:08--  https://drive.usercontent.google.com/download?id=1wgxjih8YZ-cqLqaZVa0lA3h3Y029c3oI
 Resolving drive.usercontent.google.com (drive.usercontent.google.com)... 64.233.162.132, 2a00:1450:4010:c05::84
@@ -392,25 +391,25 @@ Saving to: 'otus_task2.file'
 
 
 [1]+  Done                    wget -O otus_task2.file --no-check-certificate https://drive.usercontent.google.com/download?id=1wgxjih8YZ-cqLqaZVa0lA3h3Y029c3oI
-'''
+```
 
 Восстановим файловую систему из снапшота:
-'''
+```
 [root@zfs vagrant]# zfs receive otus/test@today < otus_task2.file
-'''
+```
 
 Далее, ищем в каталоге /otus/test файл с именем “secret_message”:
 
-'''
+```
 [root@zfs vagrant]# find /otus/test -name "secret_message"
 /otus/test/task1/file_mess/secret_message
-'''
+```
 
 Смотрим содержимое найденного файла:
-'''
+```
 [root@zfs vagrant]# cat /otus/test/task1/file_mess/secret_message
 https://otus.ru/lessons/linux-hl/  - Тут мы видим ссылку на курс OTUS
-'''
+```
 
 
 
